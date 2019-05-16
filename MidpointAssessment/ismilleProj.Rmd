@@ -1,0 +1,77 @@
+---
+title: "Fair or Foul"
+author: "Israel Miller"
+date: "5/15/19"
+output:
+  pdf_document: default
+
+---
+
+<!-- For more info on RMarkdown see http://rmarkdown.rstudio.com/ -->
+
+<!-- Enter the code required to load your data in the space below. The data will be loaded but the line of code won't show up in your write up (echo=FALSE) in order to save space-->
+```{r echo=FALSE, cache=TRUE, include=FALSE}
+#Load your data here
+library(tidyverse)
+events <- read_csv("data/events.csv") %>% mutate_if(is.character, factor)
+matchdetails <- read_csv("data/matchdetails.csv") %>% mutate_if(is.character, factor)
+teams <- read_csv("data/teams.csv") %>% mutate_if(is.character, factor)
+
+
+```
+
+<!-- In the remainder of the document, add R code chunks as needed -->
+
+### Introduction:
+
+The goal of this project is to explore how fouling affects a team's overall outcome in the First Robotics Competition. While fouling incurs a penalty on the offending team, the cost to the receiving team is unknown. This project aims to determine if there is a measurable advantage or disadvantage to fouling in relation to winning.
+
+### Data:
+
+Describe the source of the data.  Where it comes from, any relevant fields.
+
+### Exploratory data analysis:
+
+Insert exploratory data analysis here...
+
+  Describe what you did.
+
+  Include at least 3 different graphs or tables.  
+```{r}
+blueWinnerDetails <- rename(select(subset(matchdetails, matchdetails$winning_alliance == "blue"), 
+                               "winning_alliance",
+                               "alliances.blue.score"),
+                            WinningScore = alliances.blue.score)
+redWinnerDetails <- rename(select(subset(matchdetails, matchdetails$winning_alliance == "red"), 
+                                  "winning_alliance",
+                                  "alliances.red.score"),
+                           WinningScore = alliances.red.score)
+
+winnerDetails <- rbind(redWinnerDetails, blueWinnerDetails)
+
+g <- ggplot(winnerDetails, aes(x = winning_alliance, y = WinningScore, color = winning_alliance))
+g + geom_boxplot()
+
+```
+
+### Inference/Modeling:
+
+#### Hypothesis:
+Frame your question in terms of a hypothesis test or regression problem.
+
+#### Findings:
+Use R to conduct the experiment and show the outcome.
+```{r}
+
+```
+### Conclusion:
+
+Insert conclusion here...
+
+### References:
+
+Insert references here...
+
+### Appendix:
+
+Insert appendix here...
