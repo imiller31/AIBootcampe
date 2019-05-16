@@ -55,13 +55,6 @@ blueWinnerDetails <- matchdetails %>%
 blueData <- matchdetails %>% select(., contains("blue"))
 redData <- matchdetails %>% select(., contains("red"))
 
-ggplot(data = blueData, aes(x = alliances.blue.score)) + 
-  geom_histogram(aes(y=..density..), bins = 20,
-                                     color = "seagreen",
-                                     fill = "lightblue") + 
-  geom_density(color = "blue") +
-  labs(title = "Blue")
-
 ggplot(data = winnerDetails, aes(x = WinningScore)) + 
   geom_histogram(position = "dodge", aes(y = ..density.., fill = winnerDetails$winning_alliance)) +
   geom_density(aes(color = winnerDetails$winning_alliance))

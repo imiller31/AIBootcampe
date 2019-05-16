@@ -3,8 +3,9 @@ title: "Fair or Foul"
 author: "Israel Miller"
 date: "5/15/19"
 output:
+  html_document:
+    df_print: paged
   pdf_document: default
-
 ---
 
 <!-- For more info on RMarkdown see http://rmarkdown.rstudio.com/ -->
@@ -13,9 +14,89 @@ output:
 ```{r echo=FALSE, cache=TRUE, include=FALSE}
 #Load your data here
 library(tidyverse)
+library(nortest)
+library(ggplot2)
 events <- read_csv("data/events.csv") %>% mutate_if(is.character, factor)
 matchdetails <- read_csv("data/matchdetails.csv") %>% mutate_if(is.character, factor)
 teams <- read_csv("data/teams.csv") %>% mutate_if(is.character, factor)
+
+foulDetails <- select(matchdetails,"winning_alliance", 
+                            "alliances.red.score", 
+                            "alliances.blue.score", 
+                            "score_breakdown.red.techFoulCount",
+                            "score_breakdown.blue.techFoulCount",
+                            "score_breakdown.red.foulCount",
+                            "score_breakdown.blue.FoulCount",
+                            "score_breakdown.red.foulPoints",
+                            "score_breakdown.blue.foulPoints")
+
+blueWinnersFoulDetails <- select(subset(foulDetails, foulDetails$winning_alliance == "blue"), 
+                                 "alliances.blue.score",
+                                 "score_breakdown.blue.techFoulCount",
+                                 "score_breakdown.blue.foulPoints",
+                                 "score_breakdown.blue.foulCount")
+
+blueLosersFoulDetails <- select(subset(foulDetails, foulDetails$winning_alliance == "red"), 
+                                 "alliances.blue.score",
+                                 "score_breakdown.blue.techFoulCount",
+                                 "score_breakdown.blue.foulPoints",
+                                 "score_breakdown.blue.foulCount")
+
+redWinnersFoulDetails <- select(subset(foulDetails, foulDetails$winning_alliance == "red"), 
+                                "alliances.red.score",
+                                "score_breakdown.red.techFoulCount",
+                                "score_breakdown.red.foulPoints",
+                                "score_breakdown.red.foulCount")
+
+redLosersFoulDetails <- select(subset(foulDetails, foulDetails$winning_alliance == "blue"), 
+                                "alliances.red.score",
+                                "score_breakdown.red.techFoulCount",
+                                "score_breakdown.red.foulPoints",
+                                "score_breakdown.red.foulCount")
+
+
+blueWinnersFoulDetails <- rename(blueWinnersFoulDetails, WinningScore = alliances.blue.score, 
+       TechFoulCount= score_breakdown.blue.techFoulCount,
+       FoulPoints = score_breakdown.blue.foulPoints,
+       FoulCount = score_breakdown.blue.foulCount)
+
+redWinnersFoulDetails <- rename(redWinnersFoulDetails, WinningScore = alliances.red.score, 
+       TechFoulCount= score_breakdown.red.techFoulCount,
+       FoulPoints = score_breakdown.red.foulPoints,
+       FoulCount = score_breakdown.red.foulCount)
+
+blueLosersFoulDetails <- rename(blueLosersFoulDetails, LosingScore = alliances.blue.score, 
+       TechFoulCount= score_breakdown.blue.techFoulCount,
+       FoulPoints = score_breakdown.blue.foulPoints,
+       FoulCount = score_breakdown.blue.foulCount)
+
+redLosersFoulDetails <- rename(redLosersFoulDetails, LosingScore = alliances.red.score, 
+       TechFoulCount= score_breakdown.red.techFoulCount,
+       FoulPoints = score_breakdown.red.foulPoints,
+       FoulCount = score_breakdown.red.foulCount)
+
+foulWinnersDetails <- rbind(blueWinnersFoulDetails, redWinnersFoulDetails)
+
+foulLosersDetails <- rbind(blueLosersFoulDetails, redLosersFoulDetails)
+
+blueWinnerDetails <- rename(select(subset(matchdetails, matchdetails$winning_alliance == "blue"), 
+                               "winning_alliance",
+                               "alliances.blue.score"),
+                            WinningScore = alliances.blue.score)
+redWinnerDetails <- rename(select(subset(matchdetails, matchdetails$winning_alliance == "red"), 
+                                  "winning_alliance",
+                                  "alliances.red.score"),
+                           WinningScore = alliances.red.score)
+
+winnerDetails <- rbind(redWinnerDetails, blueWinnerDetails)
+
+blueWinnerDetails <- matchdetails %>% 
+  subset(., .$winning_alliance == "blue") %>% 
+  select(., "winning_alliance", "alliances.blue.score") %>%
+  rename(., WinningScore = alliances.blue.score)
+
+blueData <- matchdetails %>% select(., contains("blue"))
+redData <- matchdetails %>% select(., contains("red"))
 
 
 ```
@@ -32,28 +113,27 @@ Describe the source of the data.  Where it comes from, any relevant fields.
 
 ### Exploratory data analysis:
 
-Insert exploratory data analysis here...
-
-  Describe what you did.
-
-  Include at least 3 different graphs or tables.  
+First, we need to examine our dataset; since we are interested in exploring the impact of fouling on the outcome of a match, the "matchdetails" dataset is of particular interest. Below is a combined histogram of the total scores of the winning team, blue or red. We can see from a visual perspective that both blue and red winning scores look to be normally distributed. In fact, the score distributions look to be incredibly similar to one another.
 ```{r}
-blueWinnerDetails <- rename(select(subset(matchdetails, matchdetails$winning_alliance == "blue"), 
-                               "winning_alliance",
-                               "alliances.blue.score"),
-                            WinningScore = alliances.blue.score)
-redWinnerDetails <- rename(select(subset(matchdetails, matchdetails$winning_alliance == "red"), 
-                                  "winning_alliance",
-                                  "alliances.red.score"),
-                           WinningScore = alliances.red.score)
-
-winnerDetails <- rbind(redWinnerDetails, blueWinnerDetails)
-
-g <- ggplot(winnerDetails, aes(x = winning_alliance, y = WinningScore, color = winning_alliance))
-g + geom_boxplot()
+ggplot(data = winnerDetails, aes(x = WinningScore)) + 
+  geom_histogram(position = "dodge", aes(y = ..density.., fill = winnerDetails$winning_alliance)) +
+  geom_density(aes(color = winnerDetails$winning_alliance))
 
 ```
+In order to verify our assumptions of normality, we will run the Anderson-Darling (A-D) test for normality. 
+```{r}
+ad.test(blueWinnerDetails$WinningScore)
+ad.test(redWinnerDetails$WinningScore)
+ad.test(winnerDetails$WinningScore)
+```
+For the A-D test, we can see for blue winners, red winners, and all winners, our data passes the test for normality. For all three data sets (all winners obviously being the combination of the red and blue sets), we fail to reject the null hypothesis for the A-D test at the \alpha = .05 level. We do not have sufficient data to conclude that any of the distributions are not normal; however, we should note that while the redWinnerDetails is much greater than \alpha, the composite and blue-only distributions are only greater by a differenct of about .05.
 
+Focusing on fouls, we need to explore if winners or losers are committing fouls. First, we'll look at the full set and see if there is a significant difference between the scores of teams who foul and teams who do not foul.
+```{r}
+foulingBlueTeams <- matchdetails %>% 
+  subset(., score_breakdown.blue.foulCount > 0) %>%
+  select(., )
+```
 ### Inference/Modeling:
 
 #### Hypothesis:
